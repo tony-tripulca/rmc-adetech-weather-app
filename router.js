@@ -1,17 +1,29 @@
 const http = require('http');
-const { notFound } = require('./lib/response');
+const { notFound, badRequest } = require('./lib/response');
+const { urlParser } = require('./lib/url-parser');
 
-// map routes to handlers
+// map resources to handlers
 const routes = {
-  '/api/health': require('./api/health')
+  users: require('./api/users')
 };
 
 const router = http.createServer((req, res) => {
-  const handler = routes[req.url];
+  const parsed = urlParser(req);
+
+  if (parsed.error) {
+    return badRequest(res, parsed.error);
+  }
+
+  const { resource, action, query } = parsed;
+  const handler = routes[resource];
 
   if (!handler) {
-    return notFound(res);
+    return notFound(res, 'API resource not found');
   }
+
+  // attach parsed data to req
+  req.action = action;
+  req.query = query;
 
   handler(req, res);
 });
